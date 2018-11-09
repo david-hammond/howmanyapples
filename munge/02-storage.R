@@ -9,5 +9,4 @@ internet <- 1200*peta() * 0.7 #account for duplication
 #
 wikipedia <- 51*giga()
 
-
-https://en.wikipedia.org/wiki/User:Emijrp/All_Human_Knowledge
+all.est <- wikipedia/documented

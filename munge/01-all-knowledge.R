@@ -13,6 +13,11 @@ format.all = function(tbl){
     x = as.numeric(paste(x, collapse=""))
     return(x)
   })
+  #tbl$pc = mmin(1, tbl$Estimate/tbl$Wikidata)
+  tbl$Wikidata[is.na(tbl$Wikidata)] = 0
+  tbl$Estimate[is.na(tbl$Estimate)] = 0
+  pos = tbl$Estimate < tbl$Wikidata 
+  tbl$Estimate[pos] = tbl$Wikidata[pos]
   return(tbl)
 }
 url <- "https://en.wikipedia.org/wiki/User:Emijrp/All_Human_Knowledge"
@@ -26,15 +31,5 @@ pos = which(pos[2,] == 5)
 all = all[pos]
 all = lapply(all, format.all)
 all = bind_rows(all)
+documented = sum(all$Wikidata)/sum(all$Estimate)
 
-
-l1 = strsplit(population$`L1 speakers`, "m")
-l1 = lapply(l1, function(x) x[1])
-l1 = as.numeric(gdata::trim(paste(l1)))
-
-
-l2 = strsplit(population$`L2 speakers`, "m")
-l2 = lapply(l2, function(x) x[1])
-l2 = as.numeric(gdata::trim(paste(l2)))
-
-vars = population[[5]]
