@@ -1,7 +1,7 @@
 library("rvest")
 library(tidyverse)
 library(lpSolve)
-
+library(goalprog)
 get.solution = function(lp.soln){
   data.frame(expand.grid(l1 = languages$Language, l2 = languages$Language), n = lp.soln$solution)
 }
@@ -25,7 +25,9 @@ languages <- languages[[1]]
 languages$n1 <- format.speakers(languages$`L1 speakers`)
 languages$n2 <- format.speakers(languages$`L2 speakers`)
 languages$pc = languages$n1/sum(languages$n1)
-
+languages = languages %>% arrange(desc(n1))
+plot(cumsum(languages$n1), type = 'l')
+#languages = languages[1:10,]
 my.est = expand.grid(l1 = languages$Language, l2 = languages$Language)
 tmp = languages %>% rename(l1 = Language) %>% select(l1, n1, pc)
 my.est = left_join(my.est, tmp)
@@ -39,7 +41,7 @@ my.est = my.est[pos, ] %>% select(l1, l2, n1) %>% rename(n = n1)
 my.est1 = my.est1 %>% select(l1, l2, est) %>% rename(n = est) %>% 
   as.data.frame()
 my.est = rbind(my.est, my.est1)
-my.est = my.est %>% spread(l2,n)
+
 
 len = nrow(languages)
 f.con <- NULL
@@ -51,25 +53,22 @@ for (i in 1:len){
   f.con = cbind(f.con, tmp)
 }
 
-f.rhs = c(languages$n1, 2*languages$n2+languages$n1)
-f.obj = sample(1, replace = T, ncol(f.con))
-f.dir <- c(rep("=", len), rep("=", len))
-
-# tmp = diag(ncol(f.con))
-# f.con = rbind(f.con,tmp)
-# f.rhs = c(f.rhs, rep(0, ncol(f.con)))
-# f.dir <- c(f.dir, rep(">=", ncol(f.con)))
+f.rhs = c(languages$n1, languages$n2+languages$n1)
+remember = nrow(f.con)
 #min native speakers
-tmp = diag(ncol(f.con))[seq(1,ncol(f.con), by = 29),]
+tmp = diag(ncol(f.con))[seq(1,ncol(f.con), by = len+1),]
 f.con = rbind(f.con, tmp)
 f.rhs = c(f.rhs, 0.5*languages$n1)
-f.dir <- c(f.dir, rep(">=", len))
 
-test = lp ("min", f.obj, f.con, f.dir, f.rhs)
-x = get.solution(test)
-x = x %>% spread(l2, n)
+f.achievements = data.frame(objective = 1:nrow(f.con),
+                            priority =  c(rep(2, remember), rep(1, nrow(f.con)-remember)),
+                            p = c(rep(1, remember), rep(10000, nrow(f.con)-remember)),
+                            n = c(rep(1, remember), rep(10000, nrow(f.con)-remember)))
+# soln <- llgp( coefficients, targets, achievements )
+soln <- llgp( f.con, f.rhs, f.achievements )
+
+x = my.est
+x$n = soln$out$x 
+x = x %>% spread(l2,n)
 x$rowsums = rowSums(x[,-1])
 x = rbind(x, c("total", colSums(x[,-1])))
-
-
-
